@@ -8,20 +8,23 @@ import userRoutes from "./routes/user.js";
 import giftRoutes from "./routes/gift.js";
 import publicWishlistRoutes from "./routes/publicWishlist.js";
 
+const isDev = process.env.ENVIREMENT === "development";
 
 dotenv.config();
 const app = express();
 
 app.use(express.json());
 
-app.use(
-  cors({
-    origin: [
-      "https://ed5954eb283dc9eedab6866e33382a1d.serveo.net",
-      "http://localhost:5173",
-    ],
-  })
-);
+if (isDev) {
+  app.use(
+    cors({
+      origin: [
+        "https://ed5954eb283dc9eedab6866e33382a1d.serveo.net",
+        "http://localhost:5173",
+      ],
+    }),
+  );
+}
 
 app.use("/api/auth", authRoutes);
 app.use("/api/wishlist", wishlistRoutes);
@@ -34,6 +37,4 @@ mongoose
   .then(() => console.log("MongoDB Connected"))
   .catch((err) => console.error(err));
 
-app.listen(3000, "0.0.0.0", () =>
-  console.log("Server running on port 3000")
-);
+app.listen(3000, "0.0.0.0", () => console.log("Server running on port 3000"));
