@@ -63,4 +63,4 @@ jobs:
             docker pull ${{ needs.build-and-push.outputs.repo }}:${{ needs.build-and-push.outputs.tag }}
             docker stop unicorn || true
             docker rm unicorn || true
-            docker run -d --name unicorn -p 127.0.0.1:3000:3000 -e TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }} -e JWT_SECRET=${{ secrets.JWT_SECRET }} -e ENIVIREMENT=production -e MONGO_URI=${{ secrets.MONGO_URI }} ${{ needs.build-and-push.outputs.repo }}:${{ needs.build-and-push.outputs.tag }}
+            docker run -d --name unicorn -p 127.0.0.1:3000:3000 -e TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }} -e JWT_SECRET=${{ secrets.JWT_SECRET }} -e ENIVIREMENT=production -e MONGO_URI="${{ secrets.MONGO_URI }}" ${{ needs.build-and-push.outputs.repo }}:${{ needs.build-and-push.outputs.tag }}
