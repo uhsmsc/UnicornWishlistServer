@@ -31,10 +31,9 @@ jobs:
 
       - name: Build Docker image with release tag and latest
         run: |
-          docker build \
-            -t ghcr.io/${{ github.repository }}:${{ steps.release_tag.outputs.tag }} \
-            -t ghcr.io/${{ github.repository }}:latest \
-            .
+          REPO=$(echo "ghcr.io/${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          TAG=${{ steps.release_tag.outputs.tag }}
+          docker build -t $REPO:$TAG -t $REPO:latest .
 
       - name: Push Docker images
         run: |
