@@ -1,10 +1,9 @@
-name: Build and Push Docker Image on Release
+# .github/workflows/docker-release.yml
+name: Build, Push and Deploy Docker Image on Release
 
 on:
   release:
-    types:
-      - created
-
+    types: [created]
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
@@ -13,6 +12,10 @@ jobs:
       contents: read
       packages: write
       id-token: write
+
+    outputs:
+      tag: ${{ steps.release_tag.outputs.tag }}
+      repo: ${{ steps.set_repo.outputs.repo }}
 
     steps:
       - name: Checkout repository
@@ -29,15 +32,35 @@ jobs:
         id: release_tag
         run: echo "tag=${GITHUB_REF##*/}" >> $GITHUB_OUTPUT
 
-      - name: Build Docker image with release tag and latest
+      - name: Set lowercase image repo
+        id: set_repo
+        run: echo "repo=$(echo ghcr.io/${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+
+      - name: Build Docker image
         run: |
-          REPO=$(echo "ghcr.io/${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
-          TAG=${{ steps.release_tag.outputs.tag }}
-          docker build -t $REPO:$TAG -t $REPO:latest .
+          docker build \
+            -t ${{ steps.set_repo.outputs.repo }}:${{ steps.release_tag.outputs.tag }} \
+            -t ${{ steps.set_repo.outputs.repo }}:latest \
+            .
 
       - name: Push Docker images
         run: |
-          REPO=$(echo "ghcr.io/${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
-          TAG=${{ steps.release_tag.outputs.tag }}
-          docker push $REPO:$TAG
-          docker push $REPO:latest
+          docker push ${{ steps.set_repo.outputs.repo }}:${{ steps.release_tag.outputs.tag }}
+          docker push ${{ steps.set_repo.outputs.repo }}:latest
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to server via SSH
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            docker pull ${{ needs.build-and-push.outputs.repo }}:${{ needs.build-and-push.outputs.tag }}
+            docker stop unicorn || true
+            docker rm unicorn || true
+            docker run -d --name unicorn -p 127.0.0.1:3000:3000 -e TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }} -e JWT_SECRET=${{ secrets.JWT_SECRET }} -e ENIVIREMENT=production -e MONGO_URI=${{ secrets.MONGO_URI }} ${{ needs.build-and-push.outputs.repo }}:${{ needs.build-and-push.outputs.tag }}
