@@ -38,5 +38,7 @@ jobs:
 
       - name: Push Docker images
         run: |
-          docker push ghcr.io/${{ github.repository }}:${{ steps.release_tag.outputs.tag }}
-          docker push ghcr.io/${{ github.repository }}:latest
+          REPO=$(echo "ghcr.io/${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          TAG=${{ steps.release_tag.outputs.tag }}
+          docker push $REPO:$TAG
+          docker push $REPO:latest
